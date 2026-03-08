@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Never stop to think - Premium Interstellar Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600&family=Orbitron:wght@500;700&display=swap');
+
+        /* --- 1. RESET & FOUNDATION --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-cyan: #00f3ff;
+            --primary-purple: #a020f0;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --transition-smooth: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            /* Ganti background image menjadi warna dasar gelap untuk Nebula Canvas */
+            background-color: #02020a;
+            color: white;
+            overflow-x: hidden;
+            perspective: 1000px; /* Diperlukan untuk efek 3D Tilt */
+        }
+
+        /* --- 2. LAYERS (CANVAS, OVERLAYS, CSS PLANETS) --- */
+        #nebula-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Vignette effect untuk fokus */
+            background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+            z-index: -1;
+        }
+
+        /* Planet CSS Murni */
+        .css-planet {
+            position: fixed;
+            top: 5%;
+            right: -5%;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #2a0845, #0a0118);
+            box-shadow: 
+                inset -20px -20px 50px rgba(0,0,0,0.9),
+                0 0 60px rgba(160, 32, 240, 0.3);
+            z-index: 0;
+            pointer-events: none;
+            animation: planetFloat 20s ease-in-out infinite alternate;
+        }
+
+        .css-planet::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 450px;
+            height: 100px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 243, 255, 0.2);
+            border-bottom-color: rgba(0, 243, 255, 0.6);
+            border-top-color: transparent;
+            transform: translate(-50%, -50%) rotate(-20deg);
+            box-shadow: 0 10px 20px rgba(0, 243, 255, 0.1);
+        }
+
+        /* --- INTRO SCREEN --- */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #02020a;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s cubic-bezier(0.25, 1, 0.5, 1), visibility 1s;
+        }
+
+        .intro-title {
+            font-size: 4rem;
+            animation: titlePulse 3s infinite ease-in-out, planetFloat 4s ease-in-out infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .intro-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 50px;
+            letter-spacing: 2px;
+        }
+
+        .btn-start {
+            background: transparent;
+            color: var(--primary-cyan);
+            border: 2px solid var(--primary-cyan);
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-start:hover {
+            background: var(--primary-cyan);
+            color: black;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* --- 3. CONTAINER UTAMA (LIQUID GLASS WITH 3D TILT) --- */
+        .glass-container {
+            width: 95%;
+            max-width: 700px;
+            margin: 60px 20px;
+            padding: 40px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8), 
+                        inset 0 0 20px rgba(255, 255, 255, 0.05);
+            position: relative;
+            z-index: 10;
+            transform-style: preserve-3d;
+            transition: var(--transition-smooth);
+            /* Animasi ditahan sampai intro selesai */
+            opacity: 0;
+            transform: translateY(60px) rotateX(-10deg);
+        }
+
+        .glass-container.active {
+            animation: containerEntry 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            font-size: 2.2rem;
+            letter-spacing: 5px;
+            background: linear-gradient(135deg, #00f3ff 0%, #ffffff 50%, #a020f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.3));
+            animation: titlePulse 3s infinite ease-in-out;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 40px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        /* --- 4. INTERACTIVE INPUT AREA & CATEGORY --- */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 50px;
+        }
+
+        .input-box {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 25px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .input-box::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, var(--primary-cyan), transparent);
+            transition: 0.5s;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--primary-cyan);
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+            transform: scale(1.02);
+        }
+
+        .input-box:focus-within::after {
+            left: 100%;
+            transition: 1s;
+        }
+
+        input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 15px 25px;
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.1rem;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .category-select {
+            background: rgba(0, 0, 0, 0.4);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            outline: none;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            appearance: none;
+        }
+
+        .category-select:focus {
+            border-color: var(--primary-purple);
+            box-shadow: 0 0 20px rgba(160, 32, 240, 0.3);
+        }
+
+        .category-select option {
+            background: #02020a;
+            color: white;
+        }
+
+        .action-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-add {
+            background: white;
+            color: black;
+            border: none;
+            padding: 15px 35px;
+            border-radius: 18px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            flex: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-add:hover {
+            background: var(--primary-cyan);
+            color: white;
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.8);
+            letter-spacing: 1px;
+        }
+
+        .btn-add:active {
+            transform: scale(0.95);
+        }
+
+        /* --- 5. ENHANCED LIST & CARDS --- */
+        #curiosity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 30px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: var(--transition-smooth);
+            position: relative;
+            backdrop-filter: blur(5px);
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent);
+            transition: 0.5s;
+        }
+
+        .card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary-cyan);
+            transform: translateX(10px) scale(1.02);
+            box-shadow: -10px 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .badge-category {
+            align-self: flex-start;
+            background: rgba(160, 32, 240, 0.2);
+            color: #d18cff;
+            padding: 5px 12px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(160, 32, 240, 0.4);
+        }
+
+        .card-content {
+            font-size: 1.15rem;
+            font-weight: 300;
+            line-height: 1.6;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 20px;
+            margin-top: 5px;
+        }
+
+        .time {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .time::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--primary-purple);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn-search {
+            text-decoration: none;
+            background: rgba(0, 243, 255, 0.1);
+            color: var(--primary-cyan);
+            padding: 12px 22px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            transition: var(--transition-smooth);
+        }
+
+        .btn-search:hover {
+            background: var(--primary-cyan);
+            color: black;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-del {
+            background: transparent;
+            border: none;
+            color: rgba(255, 59, 48, 0.5);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 5px 10px;
+            transition: 0.3s;
+            border-radius: 8px;
+        }
+
+        .btn-del:hover {
+            color: #ff3b30;
+            background: rgba(255, 59, 48, 0.1);
+        }
+
+        /* --- 6. KEYFRAMES & ANIMATIONS --- */
+        @keyframes containerEntry {
+            from { opacity: 0; transform: translateY(60px) rotateX(-10deg); }
+            to { opacity: 1; transform: translateY(0) rotateX(0deg); }
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.2)); }
+            50% { filter: drop-shadow(0 0 25px rgba(160, 32, 240, 0.5)); }
+        }
+
+        @keyframes planetFloat {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-30px) rotate(5deg); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* --- 7. RESPONSIVE DESIGN --- */
+        @media (max-width: 600px) {
+            .glass-container { padding: 25px; margin: 30px 15px; border-radius: 30px; }
+            h1 { font-size: 1.5rem; letter-spacing: 2px; }
+            .btn-add { padding: 12px 20px; font-size: 0.75rem; }
+            .card { padding: 20px; }
+            .card-meta { flex-direction: column; gap: 20px; align-items: flex-start; }
+            .actions { width: 100%; justify-content: space-between; }
+            .action-row { flex-direction: column; }
+            .intro-title { font-size: 2.5rem; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { 
+            background: rgba(255, 255, 255, 0.1); 
+            border-radius: 10px; 
+        }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-cyan); }
+
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen">
+        <h1 class="intro-title" style="font-family: 'Orbitron', sans-serif; color: white;">INTERSTELLAR</h1>
+        <p class="intro-subtitle">Ruang Arsip Rasa Penasaran</p>
+        <button id="start-btn" class="btn-start">INISIASI MISI</button>
+    </div>
+
+    <div class="css-planet"></div>
+
+    <canvas id="nebula-canvas"></canvas>
+
+    <div class="glass-container" id="main-glass">
+        <h1>Rasa penasaran mu</h1>
+        <p class="subtitle">Mencatat Misteri & Mencari Jawaban Rasa Penasaran mu</p>
+
+        <form id="curiosity-form">
+            <div class="input-group">
+                <div class="input-box">
+                    <input type="text" id="curiosity-input" placeholder="Apa yang ingin kamu ketahui hari ini?" required autocomplete="off">
+                </div>
+                <div class="action-row">
+                    <select id="curiosity-category" class="category-select">
+                        <option value="🌌 Alam Semesta">🌌 Alam Semesta</option>
+                        <option value="💻 Teknologi">💻 Teknologi</option>
+                        <option value="🤯 Konspirasi">🤯 Konspirasi</option>
+                        <option value="🤔 Filosofi">🤔 Filosofi</option>
+                        <option value="🎲 Acak">🎲 Acak</option>
+                    </select>
+                    <button type="submit" class="btn-add" id="launch-btn">LUNCURKAN</button>
+                </div>
+            </div>
+        </form>
+
+        <div id="curiosity-list">
+            </div>
+    </div>
+
+    <script>
+        // --- LOGIKA INTRO SCREEN ---
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const intro = document.getElementById('intro-screen');
+            const glass = document.getElementById('main-glass');
+            
+            intro.style.opacity = '0';
+            setTimeout(() => {
+                intro.style.visibility = 'hidden';
+                glass.classList.add('active'); // Trigger animasi container utama
+            }, 1000);
+        });
+
+        // --- 1. LOGIKA ANIMASI INTERAKTIF (CANVAS ENHANCED: NEBULA GENERATOR) ---
+        const canvas = document.getElementById('nebula-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let comets = []; // Array baru untuk bintang jatuh
+        let mouseTrail = [];
+        let mouse = { x: null, y: null };
+        let time = 0; // Untuk animasi auto-movement Nebula
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            
+            // Tambahkan partikel trail setiap pergerakan mouse
+            for (let i = 0; i < 2; i++) {
+                mouseTrail.push(new TrailParticle(mouse.x, mouse.y));
+            }
+        });
+
+        class TrailParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 2;
+                this.speedY = (Math.random() - 0.5) * 2;
+                this.color = Math.random() > 0.5 ? '#00f3ff' : '#ffffff';
+                this.life = 1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= 0.02;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.3;
+                this.speedY = (Math.random() - 0.5) * 0.3;
+                this.color = Math.random() > 0.8 ? '#a020f0' : '#ffffff';
+                this.opacity = Math.random() * 0.5 + 0.1;
+                this.pulse = Math.random() * 0.05;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.opacity += Math.sin(Date.now() * 0.001 * this.pulse) * 0.01;
+
+                if (mouse.x && mouse.y) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if (dist < 150) {
+                        this.x -= dx * 0.02;
+                        this.y -= dy * 0.02;
+                    }
+                }
+
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = Math.max(0, this.opacity);
+                ctx.fill();
+            }
+        }
+
+        // --- Class Baru untuk Bintang Jatuh (Comet) ---
+        class Comet {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width * 1.5;
+                this.y = Math.random() * -canvas.height;
+                this.length = Math.random() * 80 + 20;
+                this.speed = Math.random() * 10 + 5;
+                this.opacity = Math.random() * 0.8 + 0.2;
+                this.active = Math.random() > 0.98; // Peluang muncul kecil agar terasa langka
+            }
+            update() {
+                if (this.active) {
+                    this.x -= this.speed;
+                    this.y += this.speed;
+                    if (this.x < -100 || this.y > canvas.height + 100) {
+                        this.reset();
+                    }
+                } else {
+                    if (Math.random() > 0.99) this.active = true;
+                }
+            }
+            draw() {
+                if (!this.active) return;
+                ctx.globalAlpha = this.opacity;
+                ctx.strokeStyle = 'rgba(0, 243, 255, 0.8)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.length, this.y - this.length);
+                ctx.stroke();
+            }
+        }
+
+        // Fungsi baru untuk menggambar awan nebula prosedural yang interaktif
+        function drawNebula() {
+            time += 0.002;
+            ctx.save();
+            
+            // Efek Parallax berlawanan arah mouse
+            const pX = mouse.x ? (mouse.x - canvas.width/2) * 0.05 : 0;
+            const pY = mouse.y ? (mouse.y - canvas.height/2) * 0.05 : 0;
+            ctx.translate(pX, pY);
+
+            // Perbesar canvas sedikit agar parallax tidak memotong pinggiran
+            const scale = 1.1;
+            ctx.scale(scale, scale);
+            ctx.translate(-canvas.width*(scale-1)/2, -canvas.height*(scale-1)/2);
+
+            ctx.globalCompositeOperation = 'lighter'; // Membuat warna menumpuk cerah
+
+            // Gumpalan Nebula 1 (Cyan)
+            const cX1 = canvas.width * 0.3 + Math.sin(time) * 100;
+            const cY1 = canvas.height * 0.4 + Math.cos(time) * 80;
+            const radius1 = canvas.width * 0.4;
+            const gradient1 = ctx.createRadialGradient(cX1, cY1, 0, cX1, cY1, radius1);
+            gradient1.addColorStop(0, 'rgba(0, 243, 255, 0.15)');
+            gradient1.addColorStop(0.5, 'rgba(0, 243, 255, 0.05)');
+            gradient1.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient1;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Gumpalan Nebula 2 (Purple)
+            const cX2 = canvas.width * 0.7 + Math.cos(time * 0.8) * 120;
+            const cY2 = canvas.height * 0.6 + Math.sin(time * 0.8) * 90;
+            const radius2 = canvas.width * 0.5;
+            const gradient2 = ctx.createRadialGradient(cX2, cY2, 0, cX2, cY2, radius2);
+            gradient2.addColorStop(0, 'rgba(160, 32, 240, 0.15)');
+            gradient2.addColorStop(0.5, 'rgba(160, 32, 240, 0.05)');
+            gradient2.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient2;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Interaksi Sinar Mouse (Nebula bereaksi pada kursor)
+            if (mouse.x && mouse.y) {
+                // Konversi koordinat mouse karena ada translate parallax sebelumnya
+                const mX = mouse.x - pX;
+                const mY = mouse.y - pY;
+                const gradientM = ctx.createRadialGradient(mX, mY, 0, mX, mY, 200);
+                gradientM.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+                gradientM.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradientM;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.restore();
+        }
+
+        function setupParticles() {
+            particles = [];
+            comets = [];
+            for (let i = 0; i < 150; i++) particles.push(new Particle());
+            for (let i = 0; i < 5; i++) comets.push(new Comet()); // 5 Komet maksimal
+        }
+
+        function animate() {
+            // Hapus layar dengan warna dasar super gelap agar nebula terlihat transparan
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#02020a'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Render Nebula Prosedural dahulu
+            drawNebula();
+
+            // KembalikanCompositeOperation untuk partikel bintang
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Render Background Particles (Stars)
+            particles.forEach(p => { p.update(); p.draw(); });
+            
+            // Render Bintang Jatuh (Comets)
+            comets.forEach(c => { c.update(); c.draw(); });
+
+            // Render Mouse Trail
+            for (let i = 0; i < mouseTrail.length; i++) {
+                mouseTrail[i].update();
+                mouseTrail[i].draw();
+                if (mouseTrail[i].life <= 0) {
+                    mouseTrail.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // --- 2. 3D TILT EFFECT FOR GLASS CONTAINER ---
+        const glass = document.getElementById('main-glass');
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Sensitivitas Tilt
+            const rotateX = (y - centerY) / 50;
+            const rotateY = (centerX - x) / 50;
+
+            glass.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+
+        // --- 3. LOGIKA APLIKASI PENCATAT ---
+        const form = document.getElementById('curiosity-form');
+        const input = document.getElementById('curiosity-input');
+        const categoryInput = document.getElementById('curiosity-category'); // Input Kategori Baru
+        const listContainer = document.getElementById('curiosity-list');
+
+        // Load data dari Local Storage
+        let entries = JSON.parse(localStorage.getItem('space_journal_premium')) || [];
+
+        function saveEntries() {
+            localStorage.setItem('space_journal_premium', JSON.stringify(entries));
+        }
+
+        function renderEntries() {
+            listContainer.innerHTML = '';
+            // Render dari yang paling baru
+            [...entries].reverse().forEach((entry, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                // Staggered animation delay
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                // Fallback untuk entry lama yang belum punya kategori
+                const categoryText = entry.category || '🎲 Acak';
+                
+                // Membuat query pencarian otomatis ke Google
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(entry.text)}`;
+
+                card.innerHTML = `
+                    <div class="badge-category">${categoryText}</div>
+                    <div class="card-content">${entry.text}</div>
+                    <div class="card-meta">
+                        <span class="time">${entry.date}</span>
+                        <div class="actions">
+                            <button class="btn-del" onclick="removeEntry(${entry.id})">Hapus</button>
+                            <a href="${googleSearchUrl}" target="_blank" class="btn-search">Cari Jawaban ↗</a>
+                        </div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = input.value.trim();
+            const cat = categoryInput.value;
+            if (!val) return;
+
+            // Efek Ripple pada tombol saat submit
+            const btn = document.getElementById('launch-btn');
+            btn.style.transform = 'scale(0.9)';
+            setTimeout(() => btn.style.transform = 'scale(1)', 100);
+
+            const newEntry = {
+                id: Date.now(),
+                text: val,
+                category: cat, // Menyimpan Kategori
+                date: new Date().toLocaleDateString('id-ID', { 
+                    day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                })
+            };
+
+            entries.push(newEntry);
+            saveEntries();
+            renderEntries();
+            input.value = '';
+            
+            // Scroll otomatis ke item baru
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        window.removeEntry = (id) => {
+            // Animasi hapus sebelum benar-benar hilang
+            const target = event.target.closest('.card');
+            target.style.transform = 'scale(0.8)';
+            target.style.opacity = '0';
+            target.style.transition = 'var(--transition-smooth)';
+            
+            setTimeout(() => {
+                entries = entries.filter(e => e.id !== id);
+                saveEntries();
+                renderEntries();
+            }, 300); // Sesuaikan durasi transisi CSS
+        };
+
+        // Inisialisasi
+        initCanvas();
+        setupParticles();
+        animate();
+        renderEntries();
+
+        window.addEventListener('resize', () => {
+            initCanvas();
+            setupParticles(); // Re-setup bintang agar tersebar ulang di ukuran baru
+        });
+        
+        // Console Greeting
+        console.log("%c🚀 Navigator Antariksa Siap!", "color: #00f3ff; font-size: 20px; font-weight: bold;");
+        console.log("Mencatat rasa penasaran adalah langkah pertama menuju penemuan.");
+    </script>
+</body>
+</html>
